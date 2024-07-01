@@ -1,4 +1,8 @@
 ﻿
+using ExerciseApp.ConfigurationOptions;
+using ExerciseApp.Contracts;
+using ExerciseApp.Services;
+
 class Program
 {
     static async Task Main(string[] args)
@@ -6,12 +10,10 @@ class Program
         // Create a HostBuilder and configure services and logging
         var builder = Host.CreateApplicationBuilder(args);
 
+        ConfigureAppConfiguration(builder.Configuration);
+        ConfigureServices(builder.Services);
+        ConfigureLogging(builder.Logging);
 
-        builder.Services.AddTransient<IRunService, RunService>();
-
-        builder.Logging.ClearProviders();
-        builder.Logging.AddConsole();
-        
         var app = builder.Build();
 
         // Activate the RunService
@@ -20,41 +22,24 @@ class Program
 
         await app.RunAsync();
     }
-}
-
-public interface IRunService
-{
-    Task Run();
-}
-
-public class RunService : IRunService
-{
-    private readonly ILogger<RunService> _logger;
-
-    public RunService(ILogger<RunService> logger)
+    private static void ConfigureAppConfiguration(IConfigurationBuilder config)
     {
-        _logger = logger;
+        // Load configuration from appsettings.json and environment variables
+        config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+              .AddEnvironmentVariables();
     }
 
-    public async Task Run()
+    private static void ConfigureServices(IServiceCollection services)
     {
-        try
-        {
-            // Simulate some work with a delay
-            await Task.Delay(1000);
+        // Register services
+        services.Configure<RunServiceOptions>(services.BuildServiceProvider().GetRequiredService<IConfiguration>().GetSection("RunService"));
+        services.AddTransient<IRunService, RunService>();
+    }
 
-            // Additional business logic could be placed here
-            _logger.LogInformation("Performing some important work...");
-
-            // Simulate another piece of work
-            await Task.Delay(500);
-
-            _logger.LogInformation("Run method completed successfully. ");
-        }
-        catch (Exception ex)
-        {
-            // Log any exceptions that occur within the Run method
-            _logger.LogError(ex, "An error occurred in the Run method.");
-        }
+    private static void ConfigureLogging(ILoggingBuilder logging)
+    {
+        // Configure logging
+        logging.ClearProviders();
+        logging.AddConsole();
     }
 }
